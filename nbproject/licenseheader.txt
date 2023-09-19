@@ -1,0 +1,8 @@
+<#if licenseFirst??>
+${licenseFirst}
+</#if>
+${licensePrefix}TeamOne Final Project - ClassRoom Management System
+${licensePrefix}Jayodya R, Bimalka S, Madushi K, Inusha M, Kaveesha P, Tharanga D{licensePrefix}
+<#if licenseLast??>
+${licenseLast}
+</#if>
