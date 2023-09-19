@@ -879,23 +879,6 @@ try{
        edtAddress.setText(rs.getString("address"));
        edtGuardian.setText(rs.getString("nameofguardian"));
        edtGuardianPhone.setText(rs.getString("guardianphone"));
-//        byte[] imageData = rs.getBytes("image");
-//
-//               if (imageData != null) {
-//            // Convert the byte array to a BufferedImage
-//            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageData));
-//
-//            ImageIcon imageIcon = new ImageIcon(image);
-//
-//            // Set the imageIcon as the icon for lblImage
-//            lblImage.setIcon(imageIcon);
-//        } else {
-//            // Handle the case where the "image" column is empty (null)
-//            // You can set a default image or display a message
-//            lblImage.setIcon(null); // Clear the existing icon
-//            JOptionPane.showMessageDialog(null, "Image not available.");
-//        }
-
     } 
            else{
                JOptionPane.showMessageDialog(null, "Ërror occured");
