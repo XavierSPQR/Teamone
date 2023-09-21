@@ -1,7 +1,6 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * TeamOne Final Project - ClassRoom Management System
+ * Jayodya R, Bimalka S, Madushi K, Inusha M, Kaveesha P, Tharanga D
  */
 package Interfaces;
 

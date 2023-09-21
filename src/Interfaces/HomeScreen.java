@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,13 +38,15 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
 import net.proteanit.sql.DbUtils;
+import java.sql.SQLException;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 /**
  *
  * @author TharangaD
  */
 public class HomeScreen extends javax.swing.JFrame {
-    
+
     Connection conn = null;
     Statement st = null;
     ResultSet rs = null;
@@ -53,6 +56,7 @@ public class HomeScreen extends javax.swing.JFrame {
     Icon DeleteSuccessIcon = new ImageIcon(iconUrl);
     URL iconUrl2 = JOptionPane.class.getResource("/resources/success.png");
     Icon successIcon = new ImageIcon(iconUrl2);
+
     /**
      * Creates new form HomeScreen
      */
@@ -61,113 +65,80 @@ public class HomeScreen extends javax.swing.JFrame {
         lblWarning.setVisible(false);
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice gd = ge.getDefaultScreenDevice();
-    if (gd.isFullScreenSupported()) {
-    setExtendedState(JFrame.MAXIMIZED_BOTH);
-    gd.setFullScreenWindow(this);
+        if (gd.isFullScreenSupported()) {
+            setExtendedState(JFrame.MAXIMIZED_BOTH);
+            gd.setFullScreenWindow(this);
+        }
+        conn = databaseConnection.connection();
+        FetchDate();
+        FetchTime();
+        FetchCombo();
+        ShowStudents();
     }
-    conn = databaseConnection.connection();
-    FetchDate();
-    FetchTime();
-    FetchCombo();
-    ShowStudents();
-    }
-    void FetchDate(){
+
+    void FetchDate() {
         LocalDate currentDate = LocalDate.now();
         LocalDateTime currentDateTime = LocalDateTime.now();
         DateTimeFormatter customFormatter = DateTimeFormatter.ofPattern("dd' of' MMMM yyyy");
         String formattedDate = currentDate.format(customFormatter);
         txtDateTime.setText(formattedDate);
     }
-    
-    public void FetchTime() 
-    {
-		new Timer(0, new ActionListener() 
-                {
-			@Override
-			public void actionPerformed(ActionEvent e) 
-                        {
-				java.util.Date d = new java.util.Date();
-				SimpleDateFormat form = new SimpleDateFormat("hh:mm:ss a");
-				txtDateTime2.setText(form.format(d));
-			}
-		}
-                ).start();
+
+    public void FetchTime() {
+        new Timer(0, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                java.util.Date d = new java.util.Date();
+                SimpleDateFormat form = new SimpleDateFormat("hh:mm:ss a");
+                txtDateTime2.setText(form.format(d));
+            }
+        }
+        ).start();
     }
-    
-    public void FetchCombo()
-    {
-        try{
-        String sql3="SELECT * FROM batchdetails";
-        st=conn.prepareStatement(sql3);
-        rs=st.executeQuery(sql3);
-        
-        while(rs.next())
-        {
-            String batchname=rs.getString("batch");
-            cmbSelectBatch.addItem(batchname);
-        }
-        }
-        catch(Exception e)
-        {
+
+    public void FetchCombo() {
+        try {
+            String sql3 = "SELECT * FROM batchdetails";
+            st = conn.prepareStatement(sql3);
+            rs = st.executeQuery(sql3);
+
+            while (rs.next()) {
+                String batchname = rs.getString("batch");
+                cmbSelectBatch.addItem(batchname);
+            }
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
         }
     }
-    
-    void AddNewBatch()
-    {
-             String userInput = JOptionPane.showInputDialog(null, "Enter New Batch:", "Add New Batch", JOptionPane.PLAIN_MESSAGE);
+
+    void AddNewBatch() {
+        String userInput = JOptionPane.showInputDialog(null, "Enter New Batch:", "Add New Batch", JOptionPane.PLAIN_MESSAGE);
         if (userInput != null && !userInput.isEmpty()) {
-            try{ 
+            try {
                 st = conn.createStatement();
-                String sql2="DELETE FROM batchdetails";
+                String sql2 = "DELETE FROM batchdetails";
                 st.executeUpdate(sql2);
-            DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) cmbSelectBatch.getModel();
-                    model.insertElementAt(userInput, 1);
-                    for(int i=0; i<model.getSize();i++){
-                    String sql="INSERT INTO batchdetails(batch) VALUES ('"+model.getElementAt(i)+"')";
+                DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) cmbSelectBatch.getModel();
+                model.insertElementAt(userInput, 1);
+                for (int i = 0; i < model.getSize(); i++) {
+                    String sql = "INSERT INTO batchdetails(batch) VALUES ('" + model.getElementAt(i) + "')";
                     st.executeUpdate(sql);
-                    }
-                    JOptionPane.showMessageDialog(null, "Operation successful!", "Success", JOptionPane.INFORMATION_MESSAGE, successIcon);
-                    cmbSelectBatch.setSelectedIndex(0);
-            }
-            catch(Exception e)
-            {
+                }
+                JOptionPane.showMessageDialog(null, "Operation successful!", "Success", JOptionPane.INFORMATION_MESSAGE, successIcon);
+                cmbSelectBatch.setSelectedIndex(0);
+            } catch (Exception e) {
                 JOptionPane.showMessageDialog(null, e);
             }
         } else {
             JOptionPane.showMessageDialog(null, "No Details entered.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
-    void RemoveBatch()
-    {
-             String userInput2 = JOptionPane.showInputDialog(null, "Select Batch to Delete by Position(Topmost is 1):", "Delete Batch", JOptionPane.PLAIN_MESSAGE);
-             int maxIndex=Integer.parseInt(userInput2);
-        if (userInput2 != null && !userInput2.isEmpty() && userInput2!="0" && maxIndex <cmbSelectBatch.getItemCount()-1) {
-            try{   
-                st = conn.createStatement();
-                DefaultComboBoxModel<String> model2 = (DefaultComboBoxModel<String>) cmbSelectBatch.getModel();
-                String deleteAt=model2.getElementAt(Integer.parseInt(userInput2));
-                String sql2="DELETE FROM batchdetails WHERE batch='"+deleteAt+"'";
-                st.executeUpdate(sql2);
-                
-                JOptionPane.showMessageDialog(null, "Delete successful!, Please Restart the System", "Success", JOptionPane.INFORMATION_MESSAGE, DeleteSuccessIcon);
-                System.exit(0);
-            }
-            catch(Exception e)
-            {
-                JOptionPane.showMessageDialog(null, e);
-            }
-        } else {
-            JOptionPane.showMessageDialog(null, "No Details entered.", "Error", JOptionPane.ERROR_MESSAGE);
-        }  
-    }
-    
+
     public void ShowStudents() {
         try {
-            String batch=cmbSelectBatch.getSelectedItem().toString();
+            String batch = cmbSelectBatch.getSelectedItem().toString();
             st = conn.createStatement();
-            String sql = "SELECT misl2,namewithin FROM students WHERE batch='"+batch+"'";
+            String sql = "SELECT  misl2 AS 'MIS-Last two digits', namewithin AS 'Name With Initials' FROM students WHERE batch='" + batch + "'";
             ResultSet rs = st.executeQuery(sql);
             StudentsTable.setModel(DbUtils.resultSetToTableModel(rs));
         } catch (Exception e) {
@@ -249,6 +220,9 @@ public class HomeScreen extends javax.swing.JFrame {
         edtGuardianPhone = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
+        jPanel6 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        StudentsTable1 = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Home - ClassRoom Management System");
@@ -314,20 +288,27 @@ public class HomeScreen extends javax.swing.JFrame {
             }
         });
 
-        StudentsTable.setBackground(new java.awt.Color(0, 0, 0));
-        StudentsTable.setForeground(new java.awt.Color(0, 153, 0));
         StudentsTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
+                {null, null},
+                {null, null},
+                {null, null},
+                {null, null}
             },
             new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
+                "MIS-Last two digits", "Name With Initials"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
         StudentsTable.setGridColor(new java.awt.Color(255, 255, 0));
+        StudentsTable.getTableHeader().setReorderingAllowed(false);
         StudentsTable.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent evt) {
                 StudentsTableMousePressed(evt);
@@ -604,6 +585,56 @@ public class HomeScreen extends javax.swing.JFrame {
 
         jTabbedPane1.addTab("Students", jPanel4);
 
+        StudentsTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null},
+                {null, null},
+                {null, null},
+                {null, null}
+            },
+            new String [] {
+                "MIS-Last two digits", "Name With Initials"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        StudentsTable1.setGridColor(new java.awt.Color(255, 255, 0));
+        StudentsTable1.getTableHeader().setReorderingAllowed(false);
+        StudentsTable1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                StudentsTable1MousePressed(evt);
+            }
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                StudentsTable1MouseClicked(evt);
+            }
+        });
+        jScrollPane2.setViewportView(StudentsTable1);
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 353, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(483, Short.MAX_VALUE))
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 214, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(288, Short.MAX_VALUE))
+        );
+
+        jTabbedPane1.addTab("Assignments", jPanel6);
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -634,86 +665,141 @@ public class HomeScreen extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void cmbSelectBatchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbSelectBatchActionPerformed
-            ShowStudents();
-                
+        ShowStudents();
+
     }//GEN-LAST:event_cmbSelectBatchActionPerformed
 
     private void lblImageMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblImageMouseClicked
-       lblImage.setVisible(true);
-        JFileChooser  chooser = new JFileChooser();
+        lblImage.setVisible(true);
+        JFileChooser chooser = new JFileChooser();
         chooser.showOpenDialog(null);
         File f = chooser.getSelectedFile();
         Filename = f.getAbsolutePath();
-        ImageIcon imageIcon = new ImageIcon(new ImageIcon(Filename).getImage().getScaledInstance(lblImage.getWidth(), lblImage.getHeight(),Image.SCALE_DEFAULT));
+        ImageIcon imageIcon = new ImageIcon(new ImageIcon(Filename).getImage().getScaledInstance(lblImage.getWidth(), lblImage.getHeight(), Image.SCALE_DEFAULT));
         lblImage.setIcon(imageIcon);
 
-        try{
+        try {
             File image = new File(Filename);
-            FileInputStream fix = new  FileInputStream(image);
-            ByteArrayOutputStream bos  = new   ByteArrayOutputStream();
+            FileInputStream fix = new FileInputStream(image);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] buf = new byte[1024];
 
-            for(int number;(number = fix.read(buf))!= -1;){
+            for (int number; (number = fix.read(buf)) != -1;) {
                 bos.write(buf, 0, number);
             }
             PersonImage = bos.toByteArray();
-        }catch(IOException e){
+        } catch (IOException e) {
             JOptionPane.showMessageDialog(null, e);
         }
     }//GEN-LAST:event_lblImageMouseClicked
 
     private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
-        int x=JOptionPane.showConfirmDialog(null, "Confirm Saving Changes");
-        if(x==0){
-            try{
-            String batch=cmbSelectBatch.getSelectedItem().toString();
-            String mis=edtMIS.getText();
-            String misl2=lblMisL2.getText();
-            String name=edtName.getText();
-            String namewithin=edtNameWithInit.getText();
-            
-            Date dob=edtDOB.getDate();
-            SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
-            String formattedDate = dateFormatter.format(dob);
-            
-            String age="TB";
-            String nic=edtNIC.getText();
-            String phone=edtPhone.getText();
-            String hqual=cmbHighestQual.getSelectedItem().toString();
-            String gender=cmbGender.getSelectedItem().toString();
-            String email=edtEmail.getText();
-            String address=edtAddress.getText();
-            String nameofguardian=edtGuardian.getText();
-            String guardianphone=edtGuardianPhone.getText();
-            
-            
-    String insertSQL = "INSERT INTO person_images (person_id, image_data) VALUES (?, ?)";
-    PreparedStatement preparedStatement = conn.prepareStatement(insertSQL);
-    
-    String personId =batch+misl2; // Replace with the actual person ID
-    preparedStatement.setString(1, personId);
-    preparedStatement.setBytes(2, PersonImage); // Set the image data as bytes
-    preparedStatement.executeUpdate();
-            
-            st=conn.createStatement();   
-            String sql="INSERT INTO `students`(`batch`, `mis`, `misl2`, `name`, `namewithin`, `dob`, `age`,"
-                    + "`nic`, `phone`, `hqual`, `gender`, `email`, `address`, `nameofguardian`, `guardianphone`,"
-                    + "`image`) VALUES "
-                    + "('"+batch+"','"+mis+"','"+misl2+"','"+name+"','"+namewithin+"','"+formattedDate+"','"+age+"','"+nic+"',"
-                    + "'"+phone+"','"+hqual+"','"+gender+"','"+email+"','"+address+"','"+nameofguardian+"','"+guardianphone+"',"
-                    + "'"+PersonImage+"')";
-            st.executeUpdate(sql);
-            JOptionPane.showMessageDialog(null, "Operation successful!", "Success", JOptionPane.INFORMATION_MESSAGE, successIcon);
-            ShowStudents();
-            }
-            catch(Exception e){
+        int x = JOptionPane.showConfirmDialog(null, "Confirm Saving Changes");
+        if (x == 0) {
+            try {
+                String batch = cmbSelectBatch.getSelectedItem().toString();
+                String mis = edtMIS.getText();
+                String misl2 = lblMisL2.getText();
+                String name = edtName.getText();
+                String namewithin = edtNameWithInit.getText();
+
+                Date dob = edtDOB.getDate();
+                SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
+                String formattedDate = dateFormatter.format(dob);
+
+                String age = "TB";
+                String nic = edtNIC.getText();
+                String phone = edtPhone.getText();
+                String hqual = cmbHighestQual.getSelectedItem().toString();
+                String gender = cmbGender.getSelectedItem().toString();
+                String email = edtEmail.getText();
+                String address = edtAddress.getText();
+                String nameofguardian = edtGuardian.getText();
+                String guardianphone = edtGuardianPhone.getText();
+
+                String insertSQL = "INSERT INTO person_images (person_id, image_data) VALUES (?, ?)";
+                PreparedStatement preparedStatement = conn.prepareStatement(insertSQL);
+
+                String personId = batch + misl2; // Replace with the actual person ID
+                preparedStatement.setString(1, personId);
+                preparedStatement.setBytes(2, PersonImage); // Set the image data as bytes
+                preparedStatement.executeUpdate();
+
+                st = conn.createStatement();
+                String sql = "INSERT INTO `students`(`batch`, `mis`, `misl2`, `name`, `namewithin`, `dob`, `age`,"
+                        + "`nic`, `phone`, `hqual`, `gender`, `email`, `address`, `nameofguardian`, `guardianphone`,"
+                        + "`image`) VALUES "
+                        + "('" + batch + "','" + mis + "','" + misl2 + "','" + name + "','" + namewithin + "','" + formattedDate + "','" + age + "','" + nic + "',"
+                        + "'" + phone + "','" + hqual + "','" + gender + "','" + email + "','" + address + "','" + nameofguardian + "','" + guardianphone + "',"
+                        + "'" + PersonImage + "')";
+                st.executeUpdate(sql);
+                JOptionPane.showMessageDialog(null, "Operation successful!", "Success", JOptionPane.INFORMATION_MESSAGE, successIcon);
+                ShowStudents();
+            } catch (MySQLIntegrityConstraintViolationException e) {
+                try {
+                    String batch = cmbSelectBatch.getSelectedItem().toString();
+                    String mis = edtMIS.getText();
+                    String misl2 = lblMisL2.getText();
+                    String name = edtName.getText();
+                    String namewithin = edtNameWithInit.getText();
+
+                    Date dob = edtDOB.getDate();
+                    SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
+                    String formattedDate = dateFormatter.format(dob);
+
+                    String age = "TB";
+                    String nic = edtNIC.getText();
+                    String phone = edtPhone.getText();
+                    String hqual = cmbHighestQual.getSelectedItem().toString();
+                    String gender = cmbGender.getSelectedItem().toString();
+                    String email = edtEmail.getText();
+                    String address = edtAddress.getText();
+                    String nameofguardian = edtGuardian.getText();
+                    String guardianphone = edtGuardianPhone.getText();
+
+                    String sql = "UPDATE `students` SET "
+                            + "`batch`='" + batch + "', "
+                            + "`misl2`='" + misl2 + "', "
+                            + "`name`='" + name + "', "
+                            + "`namewithin`='" + namewithin + "', "
+                            + "`dob`='" + formattedDate + "', "
+                            + "`age`='" + age + "', "
+                            + "`nic`='" + nic + "', "
+                            + "`phone`='" + phone + "', "
+                            + "`hqual`='" + hqual + "', "
+                            + "`gender`='" + gender + "', "
+                            + "`email`='" + email + "', "
+                            + "`address`='" + address + "', "
+                            + "`nameofguardian`='" + nameofguardian + "', "
+                            + "`guardianphone`='" + guardianphone + "', "
+                            + "`image`='" + PersonImage + "' "
+                            + "WHERE `mis`='" + mis + "'";
+                    st = conn.createStatement();
+                    st.executeUpdate(sql);
+                    JOptionPane.showMessageDialog(null, "Uptade successful!", "Success", JOptionPane.INFORMATION_MESSAGE, successIcon);
+                    ShowStudents();
+                    String updateSQL = "UPDATE person_images SET image_data = ? WHERE person_id = ?";
+                    PreparedStatement preparedStatement = conn.prepareStatement(updateSQL);
+                    preparedStatement.setBytes(1, PersonImage); // Set the image data as bytes (first parameter)
+                    String personId = batch + misl2; // Replace with the actual person ID
+                    preparedStatement.setString(2, personId); // Set the person_id (second parameter)
+                    preparedStatement.executeUpdate();
+
+                } catch (Exception IVCS) {
+
+                }
+            } catch (Exception e) {
                 JOptionPane.showMessageDialog(null, e);
             }
         }
     }//GEN-LAST:event_btnSaveActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        RemoveBatch();
+//        RemoveBatch();
+        setVisible(false);
+        RemoveBatch removeBatch = new RemoveBatch();
+        removeBatch.setVisible(true);
+        this.dispose();
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
@@ -721,187 +807,176 @@ public class HomeScreen extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton2MouseClicked
-        
+
     }//GEN-LAST:event_jButton2MouseClicked
 
     private void StudentsTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_StudentsTableMouseClicked
-       try {
-        int R=StudentsTable.getSelectedRow();
-        String batch=cmbSelectBatch.getSelectedItem().toString();
-        String MisL2=StudentsTable.getValueAt(R, 0).toString();    
+        try {
+            int R = StudentsTable.getSelectedRow();
+            String batch = cmbSelectBatch.getSelectedItem().toString();
+            String MisL2 = StudentsTable.getValueAt(R, 0).toString();
             st = conn.createStatement();
-            String sql = "SELECT * FROM students WHERE batch='"+batch+"' && misl2='"+MisL2+"'";
+            String sql = "SELECT * FROM students WHERE batch='" + batch + "' && misl2='" + MisL2 + "'";
             ResultSet rs = st.executeQuery(sql);
-           if (rs.next()) {
-        // Extract data from the "columnName" column, replace "columnName" with the actual column name
-       edtMIS.setText(rs.getString("mis"));
-       lblMisL2.setText(MisL2);
-       edtName.setText(rs.getString("name"));
-       edtNameWithInit.setText(rs.getString("namewithin"));
-       
-       String dateStringFromSQL = rs.getString("dob");
-       SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-       Date date = sdf.parse(dateStringFromSQL);
-       edtDOB.setDate(date);
-       
-       lblAge.setText(rs.getString("age"));
-       edtNIC.setText(rs.getString("nic"));
-       edtPhone.setText(rs.getString("phone"));
-       cmbHighestQual.setSelectedItem(rs.getString("hqual"));
-       cmbGender.setSelectedItem(rs.getString("gender"));
-       edtEmail.setText(rs.getString("email"));
-       edtAddress.setText(rs.getString("address"));
-       edtGuardian.setText(rs.getString("nameofguardian"));
-       edtGuardianPhone.setText(rs.getString("guardianphone"));
-//        byte[] imageData = rs.getBytes("image");
-//
-//               if (imageData != null) {
-//            // Convert the byte array to a BufferedImage
-//            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageData));
-//
-//            ImageIcon imageIcon = new ImageIcon(image);
-//
-//            // Set the imageIcon as the icon for lblImage
-//            lblImage.setIcon(imageIcon);
-//        } else {
-//            // Handle the case where the "image" column is empty (null)
-//            // You can set a default image or display a message
-//            lblImage.setIcon(null); // Clear the existing icon
-//            JOptionPane.showMessageDialog(null, "Image not available.");
-//        }
+            if (rs.next()) {
+                // Extract data from the "columnName" column, replace "columnName" with the actual column name
+                edtMIS.setText(rs.getString("mis"));
+                lblMisL2.setText(MisL2);
+                edtName.setText(rs.getString("name"));
+                edtNameWithInit.setText(rs.getString("namewithin"));
+
+                String dateStringFromSQL = rs.getString("dob");
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Date date = sdf.parse(dateStringFromSQL);
+                edtDOB.setDate(date);
+
+                lblAge.setText(rs.getString("age"));
+                edtNIC.setText(rs.getString("nic"));
+                edtPhone.setText(rs.getString("phone"));
+                cmbHighestQual.setSelectedItem(rs.getString("hqual"));
+                cmbGender.setSelectedItem(rs.getString("gender"));
+                edtEmail.setText(rs.getString("email"));
+                edtAddress.setText(rs.getString("address"));
+                edtGuardian.setText(rs.getString("nameofguardian"));
+                edtGuardianPhone.setText(rs.getString("guardianphone"));
+
+                String selectSQL = "SELECT image_data FROM person_images WHERE person_id = ?";
+                PreparedStatement preparedStatement = conn.prepareStatement(selectSQL);
+
+                // Set the person ID in the query
+                String personId = batch + MisL2; // Replace with the actual person ID
+                preparedStatement.setString(1, personId);
+
+                ResultSet resultSet = preparedStatement.executeQuery();
+
+                if (resultSet.next()) {
+                    // Retrieve the image data as bytes
+                    byte[] imageData = resultSet.getBytes("image_data");
+
+                    if (imageData != null) {
+                        // Convert the byte array to a BufferedImage
+                        BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageData));
+
+                        if (image != null) {
+                            // Get the dimensions of the JLabel
+                            int labelWidth = lblImage.getWidth();
+                            int labelHeight = lblImage.getHeight();
+
+                            // Scale the image to fit the dimensions of the JLabel
+                            Image scaledImage = image.getScaledInstance(labelWidth, labelHeight, Image.SCALE_SMOOTH);
+
+                            // Create an ImageIcon with the scaled image
+                            ImageIcon imageIcon = new ImageIcon(scaledImage);
+
+                            // Set the imageIcon as the icon for your JLabel (replace lblImage with your JLabel)
+                            lblImage.setIcon(imageIcon);
+                        } else {
+                            // Handle the case where the image data is not a valid image format
+                            lblImage.setIcon(null); // Clear the existing icon
+                            JOptionPane.showMessageDialog(null, "Invalid image format.");
+                        }
+                    } else {
+                        // Handle the case where the image data is null
+                        lblImage.setIcon(null); // Clear the existing icon
+                        JOptionPane.showMessageDialog(null, "Image not found for the person.");
+                    }
+                } else {
+                    // Handle the case where no data is found for the person ID
+                    lblImage.setIcon(null); // Clear the existing icon
+                    JOptionPane.showMessageDialog(null, "No image found for the person.");
+                }
+
 //===========================================================================
-
-         String selectSQL = "SELECT image_data FROM person_images WHERE person_id = ?";
-    PreparedStatement preparedStatement = conn.prepareStatement(selectSQL);
-    
-    // Set the person ID in the query
-    String personId = batch + MisL2; // Replace with the actual person ID
-    preparedStatement.setString(1, personId);
-    
-    ResultSet resultSet = preparedStatement.executeQuery();
-    
-    if (resultSet.next()) {
-        // Retrieve the image data as bytes
-        byte[] imageData = resultSet.getBytes("image_data");
-
-        if (imageData != null) {
-            // Convert the byte array to a BufferedImage
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageData));
-
-            if (image != null) {
-                // Get the dimensions of the JLabel
-                int labelWidth = lblImage.getWidth();
-                int labelHeight = lblImage.getHeight();
-
-                // Scale the image to fit the dimensions of the JLabel
-                Image scaledImage = image.getScaledInstance(labelWidth, labelHeight, Image.SCALE_SMOOTH);
-
-                // Create an ImageIcon with the scaled image
-                ImageIcon imageIcon = new ImageIcon(scaledImage);
-
-                // Set the imageIcon as the icon for your JLabel (replace lblImage with your JLabel)
-                lblImage.setIcon(imageIcon);
             } else {
-                // Handle the case where the image data is not a valid image format
-                lblImage.setIcon(null); // Clear the existing icon
-                JOptionPane.showMessageDialog(null, "Invalid image format.");
+                JOptionPane.showMessageDialog(null, "Ërror occured");
             }
-        } else {
-            // Handle the case where the image data is null
-            lblImage.setIcon(null); // Clear the existing icon
-            JOptionPane.showMessageDialog(null, "Image not found for the person.");
-        }
-    } else {
-        // Handle the case where no data is found for the person ID
-        lblImage.setIcon(null); // Clear the existing icon
-        JOptionPane.showMessageDialog(null, "No image found for the person.");
-    }
-
-//===========================================================================
-
-
-
-
-
-    } 
-           else{
-               JOptionPane.showMessageDialog(null, "Ërror occured");
-           }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
         }
-        
+
     }//GEN-LAST:event_StudentsTableMouseClicked
 
     private void btnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteActionPerformed
-try{
-        String batch=cmbSelectBatch.getSelectedItem().toString();
-        String MisL2=lblMisL2.getText().toString();
-        String id=batch+MisL2;
-        st=conn.createStatement();
-        String sql="DELETE FROM students WHERE batch='"+batch+"' && mis='"+MisL2+"'";
-        String sql2="DELETE FROM person_images WHERE person_id='"+id+"'";
-        st.executeUpdate(sql);
-        st.executeUpdate(sql2);
-        JOptionPane.showMessageDialog(null, "Delete Successful");
-}catch(Exception e){
-    JOptionPane.showMessageDialog(null, e);
-}     
-        
+        int x = JOptionPane.showConfirmDialog(null, "Confirm Delete");
+        if (x == 0) {
+            try {
+                String batch = cmbSelectBatch.getSelectedItem().toString();
+                String MisL2 = lblMisL2.getText().toString();
+                String id = batch + MisL2;
+                st = conn.createStatement();
+                String sql = "DELETE FROM students WHERE batch='" + batch + "' && misl2='" + MisL2 + "'";
+                String sql2 = "DELETE FROM person_images WHERE person_id='" + id + "'";
+                st.executeUpdate(sql);
+                st.executeUpdate(sql2);
+                JOptionPane.showMessageDialog(null, "Student Deleted");
+                ShowStudents();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, e);
+            }
+        } else {
+            //TODO
+        }
     }//GEN-LAST:event_btnDeleteActionPerformed
 
     private void StudentsTableMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_StudentsTableMousePressed
- try {
-        int R=StudentsTable.getSelectedRow();
-        String batch=cmbSelectBatch.getSelectedItem().toString();
-        String MisL2=StudentsTable.getValueAt(R, 0).toString();    
+        try {
+            int R = StudentsTable.getSelectedRow();
+            String batch = cmbSelectBatch.getSelectedItem().toString();
+            String MisL2 = StudentsTable.getValueAt(R, 0).toString();
             st = conn.createStatement();
-            String sql = "SELECT * FROM students WHERE batch='"+batch+"' && misl2='"+MisL2+"'";
+            String sql = "SELECT * FROM students WHERE batch='" + batch + "' && misl2='" + MisL2 + "'";
             ResultSet rs = st.executeQuery(sql);
-           if (rs.next()) {
-        // Extract data from the "columnName" column, replace "columnName" with the actual column name
-       edtMIS.setText(rs.getString("mis"));
-       lblMisL2.setText(MisL2);
-       edtName.setText(rs.getString("name"));
-       edtNameWithInit.setText(rs.getString("namewithin"));
-       
-       String dateStringFromSQL = rs.getString("dob");
-       SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-       Date date = sdf.parse(dateStringFromSQL);
-       edtDOB.setDate(date);
-       
-       lblAge.setText(rs.getString("age"));
-       edtNIC.setText(rs.getString("nic"));
-       edtPhone.setText(rs.getString("phone"));
-       cmbHighestQual.setSelectedItem(rs.getString("hqual"));
-       cmbGender.setSelectedItem(rs.getString("gender"));
-       edtEmail.setText(rs.getString("email"));
-       edtAddress.setText(rs.getString("address"));
-       edtGuardian.setText(rs.getString("nameofguardian"));
-       edtGuardianPhone.setText(rs.getString("guardianphone"));
-    } 
-           else{
-               JOptionPane.showMessageDialog(null, "Ërror occured");
-           }
+            if (rs.next()) {
+                // Extract data from the "columnName" column, replace "columnName" with the actual column name
+                edtMIS.setText(rs.getString("mis"));
+                lblMisL2.setText(MisL2);
+                edtName.setText(rs.getString("name"));
+                edtNameWithInit.setText(rs.getString("namewithin"));
+
+                String dateStringFromSQL = rs.getString("dob");
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Date date = sdf.parse(dateStringFromSQL);
+                edtDOB.setDate(date);
+
+                lblAge.setText(rs.getString("age"));
+                edtNIC.setText(rs.getString("nic"));
+                edtPhone.setText(rs.getString("phone"));
+                cmbHighestQual.setSelectedItem(rs.getString("hqual"));
+                cmbGender.setSelectedItem(rs.getString("gender"));
+                edtEmail.setText(rs.getString("email"));
+                edtAddress.setText(rs.getString("address"));
+                edtGuardian.setText(rs.getString("nameofguardian"));
+                edtGuardianPhone.setText(rs.getString("guardianphone"));
+            } else {
+                JOptionPane.showMessageDialog(null, "Ërror occured");
+            }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e);
         }        // TODO add your handling code here:
     }//GEN-LAST:event_StudentsTableMousePressed
 
     private void edtMISKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_edtMISKeyReleased
-        String x=edtMIS.getText().toString();
-        int y=x.length();
+        String x = edtMIS.getText().toString();
+        int y = x.length();
         if (y >= 2) {
-    String lastTwoDigits = x.substring(y - 2, y);
-    lblMisL2.setText(lastTwoDigits);
-    lblWarning.setVisible(false);
-} else {
-    lblWarning.setVisible(true);
-    lblWarning.setText("Incomplete MIS");
-    
-}
-        
+            String lastTwoDigits = x.substring(y - 2, y);
+            lblMisL2.setText(lastTwoDigits);
+            lblWarning.setVisible(false);
+        } else {
+            lblWarning.setVisible(true);
+            lblWarning.setText("Incomplete MIS");
+
+        }
+
     }//GEN-LAST:event_edtMISKeyReleased
+
+    private void StudentsTable1MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_StudentsTable1MousePressed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_StudentsTable1MousePressed
+
+    private void StudentsTable1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_StudentsTable1MouseClicked
+        // TODO add your handling code here:
+    }//GEN-LAST:event_StudentsTable1MouseClicked
 
     /**
      * @param args the command line arguments
@@ -940,6 +1015,7 @@ try{
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTable StudentsTable;
+    private javax.swing.JTable StudentsTable1;
     private javax.swing.JButton btnDelete;
     private javax.swing.JButton btnSave;
     private javax.swing.JComboBox<String> cmbGender;
@@ -974,7 +1050,9 @@ try{
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
+    private javax.swing.JPanel jPanel6;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JLabel lblAge;
     private javax.swing.JLabel lblImage;
