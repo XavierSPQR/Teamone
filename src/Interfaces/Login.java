@@ -135,6 +135,8 @@ public class Login extends javax.swing.JFrame {
             st = conn.createStatement();
             String x = txtUserName.getText();
             String y = txtPassword.getText();
+            
+            JOptionPane.showMessageDialog(null, x);
 
             String sql = "SELECT * FROM admin WHERE username='" + x + "' && password = '" + y + "'";
 
